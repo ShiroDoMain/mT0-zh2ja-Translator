@@ -1,5 +1,5 @@
 {
-  "model": "mt5-base",
+  "model": "pretrained/mt5-base",
   "epochs": 100,
   "use_fp16": false,
   "use_colossalai": true,
