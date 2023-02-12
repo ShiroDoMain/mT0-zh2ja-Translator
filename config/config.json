@@ -1,0 +1,21 @@
+{
+  "model": "mt5-base",
+  "epochs": 100,
+  "use_fp16": false,
+  "use_colossalai": true,
+  "batch_size": 2,
+  "prefix": "zh2ja",
+  "source_lang": "zh",
+  "target_lang": "ja",
+  "save_path": "save/",
+  "data_path": "data/",
+  "vocab_size": 13317,
+  "save_interval": 10,
+  "num_workers": 0,
+  "load_epoch": null,
+  "source_max_length": 128,
+  "target_max_length": 128,
+  "model_max_length": 128,
+  "lr": 1e-5,
+  "device": "cuda"
+}

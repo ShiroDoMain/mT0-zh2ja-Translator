@@ -1,0 +1,7 @@
+data/*
+save
+pretrained
+.idea
+.vscode
+__pycache__/
+
