@@ -1,10 +1,11 @@
 {
-  "model": "pretrained/mt5-base",
+  "model": "pretrained/mt0-base",
   "epochs": 100,
-  "use_fp16": false,
-  "use_colossalai": true,
-  "batch_size": 2,
-  "prefix": "zh2ja",
+  "use_accelerate": true,
+  "mixed_precision": null,
+  "gradient_accumulation_steps": 2,
+  "batch_size": 1,
+  "prefix": "zh2ja: ",
   "source_lang": "zh",
   "target_lang": "ja",
   "save_path": "save/",
@@ -16,6 +17,9 @@
   "source_max_length": 128,
   "target_max_length": 128,
   "model_max_length": 128,
+  "factor": 0.9,
+  "patience": 10,
+  "warmup": 2,
   "lr": 1e-5,
   "device": "cuda"
 }

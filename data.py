@@ -3,11 +3,11 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class Data(Dataset):
-    def __init__(self, source_path, target_path, tokenizer, source_max_length, target_max_length, prefix, device):
+    def __init__(self, source_path, target_path, tokenizer, source_max_length, target_max_length, prefix, device, limit=None):
         super().__init__()
         with open(source_path) as source_file, open(target_path) as target_file:
-            self.source_data = [prefix+line.strip() for line in source_file.readlines()]
-            self.target_data = [line.strip() for line in target_file.readlines()]
+            self.source_data = [prefix+line.strip() for line in source_file.readlines()][:limit]
+            self.target_data = [line.strip() for line in target_file.readlines()][:limit]
         self.source_max_len = source_max_length
         self.target_max_len = target_max_length
         self.tokenizer = tokenizer

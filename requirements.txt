@@ -5,3 +5,7 @@ data
 tqdm
 matplotlib
 nagisa
+# accelerate
+# psutil
+# deepspeed
+# megatron

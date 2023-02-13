@@ -1,22 +1,26 @@
-from transformers import AutoModelForSeq2SeqLM, AutoTokenizer, MT5ForConditionalGeneration, MT5Tokenizer
-from data import Data
-from config import Config
-import torch
-from torch.utils.data import DataLoader
 import os
+
+import torch
 from torch.optim import Adam
+from torch.utils.data import DataLoader
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+
+from config import Config
+from data import Data
 
 
 class ModelLoader:
     def __init__(self, config):
+        self.accelerator = None
         self.config = Config(config)
-        self.model = MT5ForConditionalGeneration.from_pretrained(self.config.model)
+        self.device = self.config.device
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(self.config.model).to(self.device)
         if self.config.load_epoch is not None:
             self.load()
-        self.model.to(self.config.device)
-        self.tokenizer = MT5Tokenizer.from_pretrained(self.config.model,
-                                                      max_length=self.config.model_max_length)
+        self.tokenizer = AutoTokenizer.from_pretrained(self.config.model,
+                                                       max_length=self.config.model_max_length).to(self.device)
         self.optimizer = Adam(self.model.parameters(), lr=self.config.lr)
+        self.scheduler = None
 
     def load_data(self):
         data_path = self.config.data_path
@@ -26,61 +30,51 @@ class ModelLoader:
                           self.config.source_max_length,
                           self.config.target_max_length,
                           self.config.prefix,
-                          self.config.device)
+                          self.device)
         val_data = Data(os.path.join(data_path, f"val.{self.config.source_lang}"),
                         os.path.join(data_path, f"val.{self.config.target_lang}"),
                         self.tokenizer,
                         self.config.source_max_length,
                         self.config.target_max_length,
                         self.config.prefix,
-                        self.config.device)
+                        self.device)
 
-        if self.config.use_colossalai:
-            from colossalai.utils import get_dataloader
-            train = get_dataloader(train_data,
-                                   batch_size=self.config.batch_size,
-                                   shuffle=True,
-                                   num_workers=self.config.num_workers)
-            val = get_dataloader(val_data,
-                                 batch_size=self.config.batch_size,
-                                 shuffle=True,
-                                 num_workers=self.config.num_workers)
-        else:
-            train = DataLoader(train_data, batch_size=self.config.batch_size, shuffle=True,
-                               num_workers=self.config.num_workers)
-            val = DataLoader(val_data, batch_size=self.config.batch_size, shuffle=True,
-                             num_workers=self.config.num_workers)
+        train = DataLoader(train_data, batch_size=self.config.batch_size, shuffle=True,
+                           num_workers=self.config.num_workers)
+        val = DataLoader(val_data, batch_size=self.config.batch_size, shuffle=True,
+                         num_workers=self.config.num_workers)
         return train, val
 
     def save(self, epoch):
-        torch.save(self.model.state_dict(), os.path.join(self.config.save_path, f"model_{epoch}.pt"))
+        save_path = os.path.join(self.config.save_path, f"epoch_{epoch}")
+        if self.config.use_accelerate:
+            self.accelerator.wait_for_everyone()
+            unwrapped = self.accelerator.unwrap_model(self.model)
+            self.accelerator.save_state(save_path)
+            self.accelerator.save(unwrapped.state_dict(), save_path+"_.pt")
+        else:
+            torch.save(self.model.state_dict(), os.path.join(self.config.save_path, f"model_{epoch}.pt"))
 
     def load(self):
         print(f"load model from epoch {self.config.load_epoch}")
         self.model.load_state_dict(
             torch.load(os.path.join(self.config.save_path, f"model_{self.config.load_epoch}.pt"))
-        )
+        ).to(self.device)
 
-    def init_colossalai(self, train_data):
-        import colossalai
-        colossalai.get_default_parser()
-        colossalai.launch_from_torch(config='./colossalai_config.py')
-        self.model, _data, *_ = colossalai.initialize(model=self.model,
-                                                      optimizer=self.optimizer,
-                                                      train_dataloader=train_data)
-        return _data
+    def init_accelerate(self, accelerator, data):
+        self.accelerator = accelerator
+        self.model, self.optimizer, self.scheduler, data = accelerator.prepare(
+            self.model, self.optimizer, self.scheduler, data
+        )
+        return data
 
     def step(self):
-        if self.config.use_colossalai:
-            self.model.step()
-        else:
-            self.optimizer.step()
+        self.optimizer.step()
+        if self.scheduler is not None:
+            self.scheduler.step()
 
     def zero_grad(self):
-        if self.config.use_colossalai:
-            self.model.step()
-        else:
-            self.optimizer.step()
+        self.optimizer.step()
 
     def __call__(self, *args, **kwargs):
         return self.model(*args, **kwargs)
