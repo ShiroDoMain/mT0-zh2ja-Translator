@@ -1,4 +1,4 @@
-此模型使用了google的mT5多语言模型，用于训练中文到日语的翻译或者日语到中文的翻译  
+此模型使用了BigScience的mT0多语言模型，用于训练中文到日语的翻译或者日语到中文的翻译  
 # Usage  
 ## train
 - 根据config/config.json可以调整模型训练的参数，目前fp16训练有loss nan的问题  
@@ -16,10 +16,10 @@
 ...
  
 ```
-- 由于Google官方的mT5模型并没有中日支持（虽然model card上有写，但是实际没有），所以在训练中日语言模型时可以使用我的版本的[预训练模型](https://drive.google.com/file/d/1rJWMnt6n_yU23MMQTABPXahVGTSFVhSS/view?usp=share_link)  
-  - *NOTE:预训练模型使用的是mT5-base, 如果要使用small或者large等其他预训练模型，只需要把下下来的预训练模型文件夹里的pytorch_model.bin和config.json(不是config文件夹下的config.json)替换掉就行，不要替换spiece.model和tokenizer.json*  
+- 由于Google官方的mT5模型并没有中日支持（虽然model card上有写，但是实际没有），所以在训练中日语言模型时可以使用我的版本的[预训练模型](https://drive.google.com/file/d/1Ay6Y8294sEsQSRRTloH0lE6iAC_KkBeP/view?usp=share_link)  
+  - *NOTE:预训练模型使用的是mT0-base, 如果要使用small或者large等其他预训练模型，只需要修改config里的model就行例如 "model": "mt0-small"*  
 
-训练运行脚本
+运行训练脚本
 ```bash
 python train.py
 ```
